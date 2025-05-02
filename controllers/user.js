@@ -1,12 +1,16 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
+import axios from "axios";
+
 import User from "../models/User.js";
 import { sendEmail } from "../utils/emailService.js";
+import { getPasswordResetTemplate } from "../utils/emailTemplates.js";
 
 const secret = process.env.SECRET;
 const RESET_SECRET = process.env.RESET_SECRET;
 const CLIENT_URL = process.env.FRONTEND_URL;
+const RECAPTCHA_SECRET_KEY = process.env.RECAPTCHA_SECRET_KEY;
 
 export const signin = async (req, res) => {
   const { email, password } = req.body;
@@ -171,9 +175,42 @@ export const getUserDetails = async (req, res) => {
 };
 
 export const forgotPassword = async (req, res) => {
-  const { email } = req.body;
+  const { email, captcha_token: captchaToken } = req.body;
 
   try {
+    if (!captchaToken) {
+      return res.status(403).json({
+        Status: "failure",
+        Error: {
+          message: "Captcha verification failed.",
+          name: "CaptchaError",
+          code: "EX-00106",
+        },
+      });
+    }
+
+    const captchaVerifyURL = `https://www.google.com/recaptcha/api/siteverify`;
+
+    const captchaResponse = await axios.post(captchaVerifyURL, null, {
+      params: {
+        secret: RECAPTCHA_SECRET_KEY,
+        response: captchaToken,
+      },
+    });
+
+    const { success, score } = captchaResponse.data;
+
+    if (!success || (score !== undefined && score < 0.5)) {
+      return res.status(403).json({
+        Status: "failure",
+        Error: {
+          message: "Captcha verification failed.",
+          name: "CaptchaError",
+          code: "EX-00106",
+        },
+      });
+    }
+
     const user = await User.findOne({ email });
 
     if (!user) {
@@ -204,14 +241,7 @@ export const forgotPassword = async (req, res) => {
 
     const resetUrl = `${CLIENT_URL}/reset-password/?token=${resetToken}`;
 
-    const message = `
-      <h2>Password Reset Request</h2>
-      <p>You requested a password reset for your Smart School account.</p>
-      <p>Please click on the following link to reset your password:</p>
-      <a href="${resetUrl}" target="_blank">Click here to reset your password</a>
-      <p>This link will expire in 1 hour.</p>
-      <p>If you didn't request this, please ignore this email and your password will remain unchanged.</p>
-    `;
+    const message = getPasswordResetTemplate(resetUrl);
 
     await sendEmail({
       to: user.email,
@@ -240,8 +270,7 @@ export const forgotPassword = async (req, res) => {
 };
 
 export const resetPassword = async (req, res) => {
-  const { token } = req.params;
-  const { password } = req.body;
+  const { password, token } = req.body;
 
   try {
     const user = await User.findOne({

@@ -14,6 +14,6 @@ router.post("/signup", signup);
 router.get("/get-user-details", auth, getUserDetails);
 
 router.post("/forgot-password", forgotPassword);
-router.post("/reset-password/:token", resetPassword);
+router.post("/reset-password", resetPassword);
 
 export default router;
