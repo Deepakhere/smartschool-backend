@@ -10,7 +10,7 @@ import { getPasswordResetTemplate } from "../utils/emailTemplates.js";
 const secret = process.env.SECRET;
 const RESET_SECRET = process.env.RESET_SECRET;
 const CLIENT_URL = process.env.FRONTEND_URL;
-const RECAPTCHA_SECRET_KEY = process.env.RECAPTCHA_SECRET_KEY;
+const RECAPTCHA_SECRET_KEY = process.env.CAPTCHA_KEY;
 
 export const signin = async (req, res) => {
   const { email, password } = req.body;
@@ -178,7 +178,6 @@ export const forgotPassword = async (req, res) => {
   const { email, captcha_token: captchaToken } = req.body;
 
   try {
-    // Validate required fields
     if (!email) {
       return res.status(400).json({
         Status: "failure",
@@ -201,57 +200,33 @@ export const forgotPassword = async (req, res) => {
       });
     }
 
-    // Log the captcha token length (helpful for debugging without exposing the actual token)
-    console.log(`Captcha token received - Length: ${captchaToken.length}`);
-
     const captchaVerifyURL = `https://www.google.com/recaptcha/api/siteverify`;
 
-    // Add more detailed logging and error handling for the captcha verification
     try {
-      const captchaResponse = await axios.post(captchaVerifyURL, null, {
-        params: {
-          secret: RECAPTCHA_SECRET_KEY,
-          response: captchaToken,
-        },
-      });
-
-      console.log(
-        "Full captcha response:",
-        JSON.stringify(captchaResponse.data)
+      const captchaResponse = await axios.post(
+        captchaVerifyURL,
+        `secret=${RECAPTCHA_SECRET_KEY}&response=${captchaToken}`,
+        {
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+          },
+        }
       );
 
-      const {
-        success,
-        score,
-        "error-codes": errorCodes,
-      } = captchaResponse.data;
-
-      // Log detailed verification information
-      console.log(
-        `Captcha verification: success=${success}, score=${score}, errors=${
-          errorCodes ? JSON.stringify(errorCodes) : "none"
-        }`
-      );
+      const { success, "error-codes": errorCodes } = captchaResponse.data;
 
       if (!success) {
+        console.log(
+          `Captcha verification failed. Errors: ${
+            errorCodes ? JSON.stringify(errorCodes) : "none"
+          }`
+        );
         return res.status(403).json({
           Status: "failure",
           Error: {
             message: `Captcha verification failed: ${
               errorCodes ? errorCodes.join(", ") : "unknown error"
             }`,
-            name: "CaptchaError",
-            code: "EX-00106",
-          },
-        });
-      }
-
-      if (score !== undefined && score < 0.5) {
-        console.log(`Captcha score too low: ${score}`);
-        return res.status(403).json({
-          Status: "failure",
-          Error: {
-            message: "Captcha verification failed due to low score.",
             name: "CaptchaError",
             code: "EX-00106",
           },
@@ -269,11 +244,8 @@ export const forgotPassword = async (req, res) => {
       });
     }
 
-    // If we get here, captcha verification was successful
     const user = await User.findOne({ email });
 
-    // Always return the same message whether the user exists or not
-    // This prevents user enumeration attacks
     const successResponse = {
       Status: "success",
       Data: {
@@ -283,8 +255,6 @@ export const forgotPassword = async (req, res) => {
     };
 
     if (!user) {
-      console.log(`Password reset requested for non-existent email: ${email}`);
-      // Return success even though no email was sent to prevent user enumeration
       return res.status(200).json(successResponse);
     }
 
@@ -299,7 +269,7 @@ export const forgotPassword = async (req, res) => {
     );
 
     user.resetPasswordToken = resetToken;
-    user.resetPasswordExpire = Date.now() + 3600000; // 1 hour
+    user.resetPasswordExpire = Date.now() + 3600000;
 
     await user.save();
 
@@ -316,8 +286,6 @@ export const forgotPassword = async (req, res) => {
       console.log(`Password reset email sent to: ${email}`);
     } catch (emailError) {
       console.error("Error sending password reset email:", emailError);
-      // Don't return error to client to prevent user enumeration
-      // But do log it server-side
     }
 
     res.status(200).json(successResponse);
