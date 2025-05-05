@@ -114,7 +114,9 @@ export const getUserDetails = async (req, res, next) => {
   try {
     const userId = req.userId;
 
-    const user = await User.findById(userId).select("email role");
+    const user = await User.findById(userId).select(
+      "email role permissions name"
+    );
 
     if (!user) {
       return next(
