@@ -582,7 +582,7 @@ export const getAllUsers = async (req, res, next) => {
       .sort({ createdAt: -1 });
 
     res.success({
-      users: users || [],
+      items: users || [],
       total_count: totalUsers,
     });
   } catch (error) {
