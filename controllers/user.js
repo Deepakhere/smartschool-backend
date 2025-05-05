@@ -546,3 +546,46 @@ export const reinviteUser = async (req, res, next) => {
     next(new AppError(error.message, "ServerError", "EX-00200", 500));
   }
 };
+
+export const getAllUsers = async (req, res, next) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 100;
+    const search = req.query.search_term || "";
+    const type = req.query.role || "";
+
+    const skip = (page - 1) * limit;
+
+    const queries = [];
+
+    if (search) {
+      queries.push({
+        $or: [
+          { name: { $regex: search, $options: "i" } },
+          { email: { $regex: search, $options: "i" } },
+          { role: { $regex: search, $options: "i" } },
+        ],
+      });
+    }
+
+    if (type) {
+      queries.push({ role: type });
+    }
+
+    const searchQuery = queries.length ? { $and: queries } : {};
+
+    const totalUsers = await User.countDocuments(searchQuery);
+
+    const users = await User.find(searchQuery, "email status name id role")
+      .skip(skip)
+      .limit(limit)
+      .sort({ createdAt: -1 });
+
+    res.success({
+      users: users || [],
+      total_count: totalUsers,
+    });
+  } catch (error) {
+    next(new AppError(error.message, "ServerError", "EX-00200", 500));
+  }
+};
