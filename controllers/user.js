@@ -142,7 +142,7 @@ export const getUserDetails = async (req, res) => {
 
     const decoded = jwt.verify(token, secret);
 
-    const user = await User.findById(decoded.id).select("email");
+    const user = await User.findById(decoded.id).select("email role");
     if (!user) {
       return res.status(403).json({
         Status: "failure",
@@ -159,7 +159,7 @@ export const getUserDetails = async (req, res) => {
       Data: {
         id: user.id,
         email: user.email,
-        role: user.rolem,
+        role: user.role,
       },
     });
   } catch (error) {
@@ -178,50 +178,114 @@ export const forgotPassword = async (req, res) => {
   const { email, captcha_token: captchaToken } = req.body;
 
   try {
+    // Validate required fields
+    if (!email) {
+      return res.status(400).json({
+        Status: "failure",
+        Error: {
+          message: "Email is required.",
+          name: "ValidationError",
+          code: "EX-00105",
+        },
+      });
+    }
+
     if (!captchaToken) {
       return res.status(403).json({
         Status: "failure",
         Error: {
-          message: "Captcha verification failed.",
+          message: "Captcha token is required.",
           name: "CaptchaError",
           code: "EX-00106",
         },
       });
     }
+
+    // Log the captcha token length (helpful for debugging without exposing the actual token)
+    console.log(`Captcha token received - Length: ${captchaToken.length}`);
 
     const captchaVerifyURL = `https://www.google.com/recaptcha/api/siteverify`;
 
-    const captchaResponse = await axios.post(captchaVerifyURL, null, {
-      params: {
-        secret: RECAPTCHA_SECRET_KEY,
-        response: captchaToken,
-      },
-    });
+    // Add more detailed logging and error handling for the captcha verification
+    try {
+      const captchaResponse = await axios.post(captchaVerifyURL, null, {
+        params: {
+          secret: RECAPTCHA_SECRET_KEY,
+          response: captchaToken,
+        },
+      });
 
-    const { success, score } = captchaResponse.data;
+      console.log(
+        "Full captcha response:",
+        JSON.stringify(captchaResponse.data)
+      );
 
-    if (!success || (score !== undefined && score < 0.5)) {
-      return res.status(403).json({
+      const {
+        success,
+        score,
+        "error-codes": errorCodes,
+      } = captchaResponse.data;
+
+      // Log detailed verification information
+      console.log(
+        `Captcha verification: success=${success}, score=${score}, errors=${
+          errorCodes ? JSON.stringify(errorCodes) : "none"
+        }`
+      );
+
+      if (!success) {
+        return res.status(403).json({
+          Status: "failure",
+          Error: {
+            message: `Captcha verification failed: ${
+              errorCodes ? errorCodes.join(", ") : "unknown error"
+            }`,
+            name: "CaptchaError",
+            code: "EX-00106",
+          },
+        });
+      }
+
+      if (score !== undefined && score < 0.5) {
+        console.log(`Captcha score too low: ${score}`);
+        return res.status(403).json({
+          Status: "failure",
+          Error: {
+            message: "Captcha verification failed due to low score.",
+            name: "CaptchaError",
+            code: "EX-00106",
+          },
+        });
+      }
+    } catch (captchaError) {
+      console.error("Captcha API error:", captchaError);
+      return res.status(500).json({
         Status: "failure",
         Error: {
-          message: "Captcha verification failed.",
+          message: "Error verifying captcha. Please try again later.",
           name: "CaptchaError",
           code: "EX-00106",
         },
       });
     }
 
+    // If we get here, captcha verification was successful
     const user = await User.findOne({ email });
 
+    // Always return the same message whether the user exists or not
+    // This prevents user enumeration attacks
+    const successResponse = {
+      Status: "success",
+      Data: {
+        message:
+          "If that email address is in our database, we will send you a password recovery link.",
+      },
+    };
+
     if (!user) {
-      return res.status(403).json({
-        Status: "failure",
-        Error: {
-          message: "Email does not exist, please check and try again.",
-          name: "ValidationError",
-          code: "EX-00107",
-        },
-      });
+      console.log(`Password reset requested for non-existent email: ${email}`);
+      // Return success even though no email was sent to prevent user enumeration
+      return res.status(200).json(successResponse);
     }
 
     const resetTokenData = crypto.randomBytes(32).toString("hex");
@@ -243,19 +307,20 @@ export const forgotPassword = async (req, res) => {
 
     const message = getPasswordResetTemplate(resetUrl);
 
-    await sendEmail({
-      to: user.email,
-      subject: "Password Reset Request",
-      html: message,
-    });
+    try {
+      await sendEmail({
+        to: user.email,
+        subject: "Password Reset Request",
+        html: message,
+      });
+      console.log(`Password reset email sent to: ${email}`);
+    } catch (emailError) {
+      console.error("Error sending password reset email:", emailError);
+      // Don't return error to client to prevent user enumeration
+      // But do log it server-side
+    }
 
-    res.status(200).json({
-      Status: "success",
-      Data: {
-        message:
-          "If that email address is in our database, we will send you a password recovery link.",
-      },
-    });
+    res.status(200).json(successResponse);
   } catch (error) {
     console.error("Password reset error:", error);
     res.status(500).json({

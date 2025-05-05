@@ -19,7 +19,7 @@ app.use(express.urlencoded({ limit: "30mb", extended: true }));
 const corsOptions = {
   origin: FRONTEND_URL,
   methods: ["GET", "POST", "PUT", "DELETE"],
-  allowedHeaders: ["Content-Type", "Authorization"],
+  allowedHeaders: ["Content-Type", "Authorization", "accesstoken"],
   credentials: true,
 };
 
