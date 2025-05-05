@@ -384,20 +384,7 @@ export const inviteUser = async (req, res, next) => {
       console.error("Error sending invitation email:", emailError);
     }
 
-    res.success(
-      {
-        message: "User invited successfully",
-        user: {
-          id: newUser.id,
-          name: newUser.name,
-          email: newUser.email,
-          role: newUser.role,
-          status: newUser.status,
-          permissions: newUser.permissions,
-        },
-      },
-      201
-    );
+    res.successMessage("User invited successfully.", 201);
   } catch (error) {
     next(new AppError(error.message, "ServerError", "EX-00200", 500));
   }
