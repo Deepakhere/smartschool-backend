@@ -183,3 +183,83 @@ export const getPasswordResetTemplate = (resetUrl) => {
   </html>
     `;
 };
+
+export const getWelcomeEmailTemplate = (userName, inviterName, inviteUrl) => {
+  const name = userName || "there";
+
+  return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Invitation to Join</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      line-height: 1.6;
+      color: #333333;
+      margin: 0;
+      padding: 0;
+    }
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 20px;
+      border: 1px solid #e0e0e0;
+    }
+    .header {
+      text-align: left;
+      padding-bottom: 10px;
+    }
+    .header img {
+      max-height: 50px;
+    }
+    .content {
+      padding: 20px 0;
+    }
+    .invitation-title {
+      font-size: 24px;
+      font-weight: bold;
+      margin-bottom: 20px;
+      padding: 5px;
+      display: inline-block;
+    }
+    .button {
+      display: inline-block;
+      background-color: #5e35b1;
+      color: white;
+      padding: 12px 30px;
+      text-decoration: none;
+      border-radius: 4px;
+      margin: 20px 0;
+      text-align: center;
+      font-weight: bold;
+    }
+ 
+    .footer {
+      padding-top: 20px;
+      color: #666666;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <img src="[Your Logo URL]" alt="Smart School">
+    </div>
+    <div class="content">
+      <div class="invitation-title">Invitation to Join</div>
+      <p>Dear ${name},</p>
+      <p>${inviterName} has invited you to use smart school to collaborate with them. Use the below link to set up your account and get started.</p>
+      <p>If you have any questions for ${inviterName}, you can reply to this email and it will go right to them.</p>
+      
+      <a href="${inviteUrl}" class="button">Accept Invitation</a>
+      
+      <p>Welcome aboard,<br>Smart School Team</p>
+    </div>
+  </div>
+</body>
+</html>
+  `;
+};

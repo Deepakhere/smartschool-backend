@@ -2,11 +2,24 @@ import mongoose from "mongoose";
 
 const UserSchema = mongoose.Schema(
   {
+    name: { type: String, required: false },
     email: { type: String, required: true },
     password: { type: String, required: false },
     role: { type: String, required: true, enum: ["admin", "parent"] },
+    status: {
+      type: String,
+      required: true,
+      enum: ["active", "inactive", "pending", "suspended"],
+      default: "pending",
+    },
     resetPasswordToken: { type: String, required: false },
     resetPasswordExpire: { type: Date, required: false },
+    permissions: {
+      canCreate: { type: Boolean, default: false },
+      canRead: { type: Boolean, default: true },
+      canUpdate: { type: Boolean, default: false },
+      canDelete: { type: Boolean, default: false },
+    },
   },
   {
     toJSON: {

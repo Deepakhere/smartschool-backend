@@ -1,34 +1,27 @@
 import jwt from "jsonwebtoken";
 
-const secret = "smartSchool@42";
+const secret = process.env.SECRET;
 
 const auth = async (req, res, next) => {
   try {
     const token = req.headers["accesstoken"]?.split(" ")[1];
 
     if (!token) {
-      return res.status(405).json({
-        Status: "failure",
-        Error: {
-          message: "Unauthorized. No token provided.",
-          name: "AuthenticationError",
-          code: "EX-00103",
-        },
-      });
+      return next(
+        new AppError(
+          "Unauthorized. Token is required.",
+          "AuthenticationError",
+          "EX-00103",
+          401
+        )
+      );
     }
 
     const decoded = jwt.verify(token, secret);
-    req.user_Id = decoded.id;
+    req.userId = decoded.id;
     next();
   } catch (error) {
-    res.status(405).json({
-      Status: "failure",
-      Error: {
-        message: "Invalid or expired token.",
-        name: "AuthenticationError",
-        code: "EX-00105",
-      },
-    });
+    next(error);
   }
 };
 
