@@ -194,3 +194,42 @@ export const checkAdminPermission = async (req, res, next) => {
     next(new AppError(error.message, "ServerError", "EX-00300", 500));
   }
 };
+
+export const checkSuperAdminPermission = async (req, res, next) => {
+  try {
+    const userId = req.userId;
+    if (!userId) {
+      return next(
+        new AppError(
+          "Authentication required",
+          "AuthorizationError",
+          "EX-00301",
+          401
+        )
+      );
+    }
+
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return next(
+        new AppError("User not found", "AuthorizationError", "EX-00302", 404)
+      );
+    }
+
+    if (user.role !== "admin" && user.permissions.isGlobalAdmin !== true) {
+      return next(
+        new AppError(
+          "You don't have permission to perform this action",
+          "AuthorizationError",
+          "EX-00307",
+          403
+        )
+      );
+    }
+
+    next();
+  } catch (error) {
+    next(new AppError(error.message, "ServerError", "EX-00300", 500));
+  }
+};

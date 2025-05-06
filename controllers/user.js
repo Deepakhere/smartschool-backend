@@ -4,6 +4,7 @@ import CryptoJS from "crypto-js";
 import axios from "axios";
 
 import User from "../models/User.js";
+import Organization from "../models/Organization.js";
 import { sendEmail } from "../utils/emailService.js";
 import {
   getPasswordResetTemplate,
@@ -306,24 +307,29 @@ export const resetPassword = async (req, res, next) => {
 
 export const inviteUser = async (req, res, next) => {
   const { name, email, role, permissions } = req.body;
+  const organizationId = req.params.organizationId;
+
+  if (!organizationId) {
+    return next(
+      new AppError(
+        "Organization ID is required.",
+        "ValidationError",
+        "EX-00209",
+        400
+      )
+    );
+  }
 
   try {
-    const requestingUserId = req.userId;
-    const requestingUser = await User.findById(requestingUserId);
+    const organization = await Organization.findById(organizationId);
 
-    if (!requestingUser) {
-      return next(
-        new AppError("User not found.", "AuthorizationError", "EX-00201", 404)
-      );
-    }
-
-    if (!requestingUser.permissions.canCreate) {
+    if (!organization) {
       return next(
         new AppError(
-          "You don't have permission to create users.",
-          "AuthorizationError",
-          "EX-00202",
-          403
+          "Organization not found.",
+          "NotFoundError",
+          "EX-00201",
+          404
         )
       );
     }
@@ -353,6 +359,9 @@ export const inviteUser = async (req, res, next) => {
         canDelete: permissions?.canDelete || false,
       },
     });
+
+    organization.users.push(newUser.id);
+    await organization.save();
 
     const inviteTokenData = CryptoJS.lib.WordArray.random(32).toString(
       CryptoJS.enc.Hex
@@ -550,15 +559,43 @@ export const reinviteUser = async (req, res, next) => {
 };
 
 export const getAllUsers = async (req, res, next) => {
+  const organizationId = req.params.organizationId;
+
+  if (!organizationId) {
+    return next(
+      new AppError(
+        "Organization ID is required.",
+        "ValidationError",
+        "EX-00209",
+        400
+      )
+    );
+  }
+
   try {
+    const organization = await Organization.findById(organizationId);
+
+    if (!organization) {
+      return next(
+        new AppError(
+          "Organization not found.",
+          "NotFoundError",
+          "EX-00201",
+          404
+        )
+      );
+    }
+
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 100;
     const search = req.query.search_term || "";
+    const status = req.query.status || "";
     const type = req.query.role || "";
-
     const skip = (page - 1) * limit;
 
-    const queries = [];
+    const queries = [
+      { _id: { $in: organization.users } }, // Only users in the organization
+    ];
 
     if (search) {
       queries.push({
@@ -574,6 +611,10 @@ export const getAllUsers = async (req, res, next) => {
       queries.push({ role: type });
     }
 
+    if (status) {
+      queries.push({ status: status });
+    }
+
     const searchQuery = queries.length ? { $and: queries } : {};
 
     const totalUsers = await User.countDocuments(searchQuery);
@@ -586,6 +627,41 @@ export const getAllUsers = async (req, res, next) => {
     res.success({
       items: users || [],
       total_count: totalUsers,
+    });
+  } catch (error) {
+    next(new AppError(error.message, "ServerError", "EX-00200", 500));
+  }
+};
+
+export const updateUserDetails = async (req, res, next) => {
+  const userId = req.params.userId;
+  const { name, email, role, permissions } = req.body;
+
+  try {
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return next(
+        new AppError("User not found.", "NotFoundError", "EX-00207", 404)
+      );
+    }
+
+    user.name = name;
+    user.email = email;
+    user.role = role;
+    user.permissions = permissions;
+
+    await user.save();
+
+    res.success({
+      message: "User updated successfully",
+      item: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        permissions: user.permissions,
+      },
     });
   } catch (error) {
     next(new AppError(error.message, "ServerError", "EX-00200", 500));

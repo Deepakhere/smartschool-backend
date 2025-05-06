@@ -4,6 +4,7 @@ import dotenv from "dotenv";
 
 import connectDB from "./config/db.js";
 import userRoutes from "./routes/user.js";
+import organizationRoues from "./routes/organization.js";
 import { responseHandler, errorHandler } from "./middleware/index.js";
 
 const envFile =
@@ -31,6 +32,7 @@ app.use(cors(corsOptions));
 app.use(responseHandler);
 
 app.use("/auth/v1/user", userRoutes);
+app.use("/organization-service/v1/organization", organizationRoues);
 
 app.use((req, res, next) => {
   res.status(404).json({ message: "Route not found" });

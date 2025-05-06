@@ -19,6 +19,7 @@ const UserSchema = mongoose.Schema(
       canRead: { type: Boolean, default: true },
       canUpdate: { type: Boolean, default: false },
       canDelete: { type: Boolean, default: false },
+      isGlobalAdmin: { type: Boolean, default: false },
     },
   },
   {
