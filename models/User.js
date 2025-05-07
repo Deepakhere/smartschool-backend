@@ -12,6 +12,7 @@ const UserSchema = mongoose.Schema(
       enum: ["active", "inactive", "pending", "suspended"],
       default: "pending",
     },
+    phoneNumber: { type: String, required: false },
     resetPasswordToken: { type: String, required: false },
     resetPasswordExpire: { type: Date, required: false },
     permissions: {

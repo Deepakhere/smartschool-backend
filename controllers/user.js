@@ -60,6 +60,7 @@ export const signin = async (req, res, next) => {
       role: oldUser.role,
       name: oldUser.name || "",
       permissions: oldUser.permissions,
+      phoneNumber: oldUser.phoneNumber || "",
     });
   } catch (err) {
     next(new AppError(err.message, "ServerError", "EX-00100", 500));
@@ -67,7 +68,7 @@ export const signin = async (req, res, next) => {
 };
 
 export const signup = async (req, res, next) => {
-  const { email, password, role, permissions, name } = req.body;
+  const { email, password, role, permissions, phoneNumber, name } = req.body;
 
   try {
     let oldUser;
@@ -88,6 +89,7 @@ export const signup = async (req, res, next) => {
       role,
       permissions,
       name,
+      phoneNumber,
     });
 
     const token = jwt.sign({ email: result.email, id: result.id }, secret, {
@@ -103,6 +105,7 @@ export const signup = async (req, res, next) => {
         role: result.role,
         name: result.name || "",
         permissions: result.permissions,
+        phoneNumber: oldUser.phoneNumber || "",
       },
       201
     );
@@ -116,7 +119,7 @@ export const getUserDetails = async (req, res, next) => {
     const userId = req.userId;
 
     const user = await User.findById(userId).select(
-      "email role permissions name"
+      "email role permissions name phoneNumber"
     );
 
     if (!user) {
@@ -131,6 +134,7 @@ export const getUserDetails = async (req, res, next) => {
       role: user.role,
       name: user.name || "",
       permissions: user.permissions,
+      phoneNumber: oldUser.phoneNumber || "",
     });
   } catch (error) {
     next(new AppError(error.message, "ServerError", "EX-00100", 500));
@@ -306,7 +310,7 @@ export const resetPassword = async (req, res, next) => {
 };
 
 export const inviteUser = async (req, res, next) => {
-  const { name, email, role, permissions } = req.body;
+  const { name, email, role, permissions, phoneNumber } = req.body;
   const organizationId = req.params.organizationId;
 
   if (!organizationId) {
@@ -358,6 +362,7 @@ export const inviteUser = async (req, res, next) => {
         canUpdate: permissions?.canUpdate || false,
         canDelete: permissions?.canDelete || false,
       },
+      phoneNumber,
     });
 
     organization.users.push(newUser.id);
@@ -619,7 +624,10 @@ export const getAllUsers = async (req, res, next) => {
 
     const totalUsers = await User.countDocuments(searchQuery);
 
-    const users = await User.find(searchQuery, "email status name id role")
+    const users = await User.find(
+      searchQuery,
+      "email status name id role phoneNumber"
+    )
       .skip(skip)
       .limit(limit)
       .sort({ createdAt: -1 });
@@ -635,7 +643,7 @@ export const getAllUsers = async (req, res, next) => {
 
 export const updateUserDetails = async (req, res, next) => {
   const userId = req.params.userId;
-  const { name, email, role, permissions } = req.body;
+  const { name, email, role, permissions, phoneNumber } = req.body;
 
   try {
     const user = await User.findById(userId);
@@ -650,6 +658,7 @@ export const updateUserDetails = async (req, res, next) => {
     user.email = email;
     user.role = role;
     user.permissions = permissions;
+    user.phoneNumber = phoneNumber;
 
     await user.save();
 
@@ -661,8 +670,20 @@ export const updateUserDetails = async (req, res, next) => {
         email: user.email,
         role: user.role,
         permissions: user.permissions,
+        phoneNumber: user.phoneNumber,
       },
     });
+  } catch (error) {
+    next(new AppError(error.message, "ServerError", "EX-00200", 500));
+  }
+};
+
+export const deleteUser = async (req, res, next) => {
+  const userId = req.params.userId;
+
+  try {
+    await User.findByIdAndDelete(userId);
+    res.successMessage("User deleted successfully.");
   } catch (error) {
     next(new AppError(error.message, "ServerError", "EX-00200", 500));
   }
