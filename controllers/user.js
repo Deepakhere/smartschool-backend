@@ -313,6 +313,7 @@ export const resetPassword = async (req, res, next) => {
 export const inviteUser = async (req, res, next) => {
   const { name, email, role, permissions, phoneNumber } = req.body;
   const organizationId = req.params.organizationId;
+  const reqUserId = req.userId;
 
   if (!organizationId) {
     return next(
@@ -340,6 +341,8 @@ export const inviteUser = async (req, res, next) => {
     }
 
     const existingUser = await User.findOne({ email });
+
+    const requestingUser = await User.findById(reqUserId);
 
     if (existingUser) {
       return next(
