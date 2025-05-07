@@ -105,7 +105,7 @@ export const signup = async (req, res, next) => {
         role: result.role,
         name: result.name || "",
         permissions: result.permissions,
-        phoneNumber: oldUser.phoneNumber || "",
+        phoneNumber: result.phoneNumber || "",
       },
       201
     );
@@ -134,9 +134,10 @@ export const getUserDetails = async (req, res, next) => {
       role: user.role,
       name: user.name || "",
       permissions: user.permissions,
-      phoneNumber: oldUser.phoneNumber || "",
+      phoneNumber: user.phoneNumber || "",
     });
   } catch (error) {
+    console.log(error);
     next(new AppError(error.message, "ServerError", "EX-00100", 500));
   }
 };
