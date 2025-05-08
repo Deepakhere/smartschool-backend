@@ -630,7 +630,7 @@ export const getAllUsers = async (req, res, next) => {
 
     const users = await User.find(
       searchQuery,
-      "email status name id role phoneNumber"
+      "email status name id role phoneNumber permissions"
     )
       .skip(skip)
       .limit(limit)
