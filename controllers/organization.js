@@ -75,7 +75,7 @@ export const createOrganization = async (req, res, next) => {
       updatedBy: userId,
       users: [userId],
     });
-    res.success({ organization });
+    res.success({ item: organization });
   } catch (error) {
     next(new AppError(error.message, "ServerError", "EX-00100", 500));
   }
