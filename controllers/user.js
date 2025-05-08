@@ -2,6 +2,7 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import CryptoJS from "crypto-js";
 import axios from "axios";
+import mongoose from "mongoose";
 
 import User from "../models/User.js";
 import Organization from "../models/Organization.js";
@@ -12,6 +13,7 @@ import {
 } from "../utils/emailTemplates.js";
 import AppError from "../utils/AppError.js";
 
+const { isValidObjectId } = mongoose;
 const secret = process.env.SECRET;
 const RESET_SECRET = process.env.RESET_SECRET;
 const CLIENT_URL = process.env.FRONTEND_URL;
@@ -602,9 +604,7 @@ export const getAllUsers = async (req, res, next) => {
     const type = req.query.role || "";
     const skip = (page - 1) * limit;
 
-    const queries = [
-      { _id: { $in: organization.users } }, // Only users in the organization
-    ];
+    const queries = [{ _id: { $in: organization.users } }];
 
     if (search) {
       queries.push({
@@ -650,6 +650,10 @@ export const updateUserDetails = async (req, res, next) => {
   const { name, email, role, permissions, phoneNumber } = req.body;
 
   try {
+    if (!isValidObjectId(userId)) {
+      return res.errorMessage("Invalid user ID format", 400);
+    }
+
     const user = await User.findById(userId);
 
     if (!user) {
@@ -681,14 +685,49 @@ export const updateUserDetails = async (req, res, next) => {
     next(new AppError(error.message, "ServerError", "EX-00200", 500));
   }
 };
-
 export const deleteUser = async (req, res, next) => {
   const userId = req.params.userId;
+  const organizationId = req.params.organizationId;
 
   try {
+    if (!isValidObjectId(userId)) {
+      return next(new AppError("Invalid user ID format", "BadRequest", 400));
+    }
+
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return next(
+        new AppError("User not found.", "NotFoundError", "EX-00207", 404)
+      );
+    }
+
     await User.findByIdAndDelete(userId);
-    res.successMessage("User deleted successfully.");
+
+    if (isValidObjectId(organizationId)) {
+      const organization = await Organization.findById(organizationId);
+
+      if (organization) {
+        await Organization.updateOne(
+          { _id: organizationId },
+          { $pull: { users: userId } }
+        );
+      } else {
+        return next(
+          new AppError(
+            "Organization not found.",
+            "NotFoundError",
+            "EX-00201",
+            404
+          )
+        );
+      }
+    }
+
+    return res.successMessage("User deleted successfully.");
   } catch (error) {
-    next(new AppError(error.message, "ServerError", "EX-00200", 500));
+    return next(
+      new AppError("Failed to delete user", "ServerError", "EX-00200", 500)
+    );
   }
 };

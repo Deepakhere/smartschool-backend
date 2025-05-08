@@ -51,7 +51,7 @@ router.put(
 );
 
 router.delete(
-  "/delete-user/:userId",
+  "/delete-user/:organizationId/user/:userId",
   auth,
   checkAdminPermission,
   checkDeletePermission,
