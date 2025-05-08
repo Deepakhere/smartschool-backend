@@ -3,7 +3,7 @@ import mongoose from "mongoose";
 const OrganizationSchema = new mongoose.Schema(
   {
     name: { type: String, required: true },
-    location: { type: String, required: true },
+    address: { type: String, required: true },
     pincode: { type: String, required: true },
     country: { type: String, required: true, default: "IN" },
     description: { type: String, required: false, default: "" },

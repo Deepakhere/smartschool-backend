@@ -27,7 +27,7 @@ export const getAllOrganizations = async (req, res, next) => {
 };
 
 export const createOrganization = async (req, res, next) => {
-  const { name, location, pincode, description } = req.body;
+  const { name, address, pincode, description } = req.body;
   const userId = req.userId;
   try {
     if (!name) {
@@ -41,10 +41,10 @@ export const createOrganization = async (req, res, next) => {
       );
     }
 
-    if (!location) {
+    if (!address) {
       return next(
         new AppError(
-          "Organization location is required.",
+          "Organization address is required.",
           "ValidationError",
           "EX-00102",
           400
@@ -65,7 +65,7 @@ export const createOrganization = async (req, res, next) => {
 
     const organization = await Organization.create({
       name,
-      location,
+      address,
       pincode,
       description,
       status: "active",
@@ -82,7 +82,7 @@ export const createOrganization = async (req, res, next) => {
 };
 
 export const updateOrganization = async (req, res, next) => {
-  const { name, location, pincode, description } = req.body;
+  const { name, address, pincode, description } = req.body;
   const organizationId = req.params.organizationId;
   const userId = req.userId;
 
@@ -98,10 +98,10 @@ export const updateOrganization = async (req, res, next) => {
       );
     }
 
-    if (!location) {
+    if (!address) {
       return next(
         new AppError(
-          "Organization location is required.",
+          "Organization address is required.",
           "ValidationError",
           "EX-00102",
           400
@@ -123,7 +123,7 @@ export const updateOrganization = async (req, res, next) => {
       organizationId,
       {
         name,
-        location,
+        address,
         pincode,
         description,
         updatedAt: new Date().toISOString(),
