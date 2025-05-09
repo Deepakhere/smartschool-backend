@@ -3,9 +3,10 @@ import cors from "cors";
 import dotenv from "dotenv";
 
 import connectDB from "./config/db.js";
+import { responseHandler, errorHandler } from "./middleware/index.js";
 import userRoutes from "./routes/user.js";
 import organizationRoues from "./routes/organization.js";
-import { responseHandler, errorHandler } from "./middleware/index.js";
+import studentProfileRoutes from "./routes/studentProfile.js";
 
 const envFile =
   process.env.NODE_ENV === "production"
@@ -33,6 +34,7 @@ app.use(responseHandler);
 
 app.use("/auth/v1/user", userRoutes);
 app.use("/organization-service/v1/organization", organizationRoues);
+app.use("/student-service/v1/profile", studentProfileRoutes);
 
 app.use((req, res, next) => {
   res.status(404).json({ message: "Route not found" });
