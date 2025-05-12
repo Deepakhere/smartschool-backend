@@ -2,6 +2,7 @@ import express from "express";
 import {
   getParentProfileByEmail,
   createStudentProfile,
+  getStudentProfile,
 } from "../controllers/studentProfile.js";
 import auth from "../middleware/auth.js";
 import {
@@ -24,6 +25,13 @@ router.post(
   checkAdminPermission,
   checkCreatePermission,
   createStudentProfile
+);
+
+router.get(
+  "/:organizationId/get-student-profile",
+  auth,
+  checkAdminPermission,
+  getStudentProfile
 );
 
 export default router;

@@ -2,19 +2,19 @@ import mongoose from "mongoose";
 
 const StudentProfileSchema = mongoose.Schema(
   {
-    full_name: { type: String, required: true },
+    name: { type: String, required: true },
     address: { type: String, required: true },
     city: { type: String, required: true },
     state: { type: String, required: true },
     country: { type: String, required: true, default: "IN" },
-    pincode: { type: String, required: true },
-    date_of_birth: { type: String, required: true },
+    pincode: { type: String, required: false },
+    dateOfBirth: { type: String, required: true },
     division: { type: String, required: false, default: "" },
-    class_id: { type: String, required: false, default: "" },
-    roll_number: { type: String, required: false, default: "" },
-    parent_id: { type: mongoose.Schema.ObjectId, ref: "User" },
-    organization_id: {
-      required: true,
+    classId: { type: String, required: false, default: "" },
+    rollNumber: { type: String, required: false, default: "" },
+    parentId: { type: mongoose.Schema.ObjectId, ref: "User" },
+    organizationId: {
+      required: false,
       type: mongoose.Schema.ObjectId,
       ref: "Organization",
     },
@@ -24,9 +24,9 @@ const StudentProfileSchema = mongoose.Schema(
       enum: ["active", "inactive", "suspended"],
       default: "active",
     },
-    admission_number: { type: String, required: false, default: "" },
-    admission_date: { type: String, required: false, default: "" },
-    registration_id: { type: String, required: false, default: "" },
+    admissionNumber: { type: String, required: false, default: "" },
+    admissionDate: { type: String, required: false, default: "" },
+    registrationId: { type: String, required: false, default: "" },
   },
   {
     toJSON: {
