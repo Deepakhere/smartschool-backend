@@ -288,6 +288,19 @@ export const editStudentProfile = async (req, res, next) => {
       );
     }
 
+    const { parentId, parentName, parentEmail, phoneNumber } = req.body;
+
+    if (parentId && isValidObjectId(parentId)) {
+      const userUpdate = {};
+      if (parentName) userUpdate.name = parentName;
+      if (parentEmail) userUpdate.email = parentEmail;
+      if (phoneNumber) userUpdate.phoneNumber = phoneNumber;
+
+      if (Object.keys(userUpdate).length > 0) {
+        await User.findByIdAndUpdate(parentId, { $set: userUpdate });
+      }
+    }
+
     res.successMessage("Student details updated successfully.");
   } catch (error) {
     next(new AppError(error.message, "ServerError", "EX-00100", 500));
