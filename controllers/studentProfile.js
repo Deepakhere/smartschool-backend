@@ -201,3 +201,95 @@ export const getStudentProfile = async (req, res, next) => {
     next(new AppError(error.message, "ServerError", "EX-00100", 500));
   }
 };
+
+export const getStudentById = async (req, res, next) => {
+  const { studentId } = req.params;
+
+  if (!isValidObjectId(studentId)) {
+    return next(new AppError("Invalid student ID format", "BadRequest", 400));
+  }
+
+  try {
+    const student = await StudentProfile.findById(studentId).populate({
+      path: "parentId",
+      select: "name email phoneNumber",
+    });
+
+    if (!student) {
+      return next(
+        new AppError("Student not found.", "NotFoundError", "EX-00101", 404)
+      );
+    }
+
+    const studentObj = student.toObject();
+
+    const parentId = studentObj.parentId?.id || null;
+
+    const response = {
+      ...studentObj,
+      parentId: parentId,
+      parentName: studentObj.parentId?.name || null,
+      parentEmail: studentObj.parentId?.email || null,
+      phoneNumber: studentObj.parentId?.phoneNumber || null,
+    };
+
+    // Remove unwanted fields
+    delete response._id;
+    delete response.__v;
+
+    res.success({ item: response });
+  } catch (error) {
+    next(new AppError(error.message, "ServerError", "EX-00100", 500));
+  }
+};
+
+export const editStudentProfile = async (req, res, next) => {
+  const { studentId } = req.params;
+
+  if (!isValidObjectId(studentId)) {
+    return next(new AppError("Invalid student ID format", "BadRequest", 400));
+  }
+
+  try {
+    const updates = {};
+
+    const allowedFields = [
+      "name",
+      "address",
+      "city",
+      "state",
+      "country",
+      "pincode",
+      "dateOfBirth",
+      "division",
+      "classId",
+      "rollNumber",
+      "status",
+      "admissionNumber",
+      "admissionDate",
+      "registrationId",
+    ];
+
+    for (const field of allowedFields) {
+      if (req.body.hasOwnProperty(field)) {
+        updates[field] = req.body[field];
+      }
+    }
+
+    const updatedStudent = await StudentProfile.findByIdAndUpdate(
+      studentId,
+      { $set: updates },
+      { new: true }
+    );
+
+    if (!updatedStudent) {
+      return next(
+        new AppError("Student not found.", "NotFoundError", "EX-00101", 404)
+      );
+    }
+
+    res.successMessage("Student details updated successfully.");
+  } catch (error) {
+    next(new AppError(error.message, "ServerError", "EX-00100", 500));
+  }
+};
