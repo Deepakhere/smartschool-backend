@@ -5,12 +5,14 @@ import {
   getStudentProfile,
   getStudentById,
   editStudentProfile,
+  deleteStudentProfile,
 } from "../controllers/studentProfile.js";
 import auth from "../middleware/auth.js";
 import {
   checkCreatePermission,
   checkAdminPermission,
   checkUpdatePermission,
+  checkDeletePermission,
 } from "../middleware/permissions.js";
 
 const router = express.Router();
@@ -50,6 +52,14 @@ router.put(
   checkAdminPermission,
   checkUpdatePermission,
   editStudentProfile
+);
+
+router.delete(
+  "/:organizationId/delete-student/:studentId",
+  auth,
+  checkAdminPermission,
+  checkDeletePermission,
+  deleteStudentProfile
 );
 
 export default router;

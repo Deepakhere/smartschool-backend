@@ -174,6 +174,7 @@ export const getStudentProfile = async (req, res, next) => {
     const limit = parseInt(req.query.limit) || 100;
     const search = req.query.search_term || "";
     const skip = (page - 1) * limit;
+    const classId = req.query.classId || "";
 
     const query = { organizationId: organizationId };
 
@@ -181,8 +182,11 @@ export const getStudentProfile = async (req, res, next) => {
       query.$or = [
         { name: { $regex: search, $options: "i" } },
         { rollNumber: { $regex: search, $options: "i" } },
-        { admissionNumber: { $regex: search, $options: "i" } },
       ];
+    }
+
+    if (classId) {
+      query.classId = classId;
     }
 
     const totalStudents = await StudentProfile.countDocuments(query);
@@ -302,6 +306,63 @@ export const editStudentProfile = async (req, res, next) => {
     }
 
     res.successMessage("Student details updated successfully.");
+  } catch (error) {
+    next(new AppError(error.message, "ServerError", "EX-00100", 500));
+  }
+};
+
+export const deleteStudentProfile = async (req, res, next) => {
+  const { studentId, organizationId } = req.params;
+
+  if (!isValidObjectId(studentId)) {
+    return next(new AppError("Invalid student ID format", "BadRequest", 400));
+  }
+
+  if (!isValidObjectId(organizationId)) {
+    return next(
+      new AppError("Invalid organization ID format", "BadRequest", 400)
+    );
+  }
+
+  try {
+    const student = await StudentProfile.findById(studentId);
+
+    if (!student) {
+      return next(
+        new AppError("Student not found.", "NotFoundError", "EX-00101", 404)
+      );
+    }
+
+    const isHasMultipleStudents = await StudentProfile.find({
+      parentId: student.parentId,
+    });
+
+    if (isHasMultipleStudents.length === 1) {
+      const organization = await Organization.findById(organizationId);
+      if (!organization) {
+        return next(
+          new AppError(
+            "Organization not found.",
+            "NotFoundError",
+            "EX-00101",
+            404
+          )
+        );
+      }
+
+      await User.findByIdAndDelete(student.parentId);
+
+      if (organization) {
+        await Organization.updateOne(
+          { _id: organizationId },
+          { $pull: { users: student.parentId } }
+        );
+      }
+    }
+
+    await StudentProfile.findByIdAndDelete(studentId);
+
+    res.successMessage("Student deleted successfully.");
   } catch (error) {
     next(new AppError(error.message, "ServerError", "EX-00100", 500));
   }
